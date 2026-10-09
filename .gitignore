@@ -9,3 +9,4 @@ dist/
 
 kitchen_inventory.db
 main_backup.py
+main_error_backup.py
