@@ -6,3 +6,6 @@ build/
 dist/
 *.spec
 .DS_Store
+
+kitchen_inventory.db
+main_backup.py

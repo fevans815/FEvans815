@@ -2,43 +2,30 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-# Store inventory items while the application is running
-inventory = []
+from database import (
+    create_database,
+    add_inventory_item,
+    get_inventory_items,
+    update_inventory_item,
+    delete_inventory_item
+)
+
+# Create the database and load saved inventory
+create_database()
+inventory = get_inventory_items()
 
 def add_item():
     name = name_entry.get().strip()
     quantity = quantity_entry.get().strip()
 
-    if not name:
-        messagebox.showerror("Error", "Please enter an item name.")
+    if not name or not quantity.isdecimal():
+        messagebox.showerror("Error", "Enter a valid name and quantity.")
         return
 
-    if not quantity.isdigit():
-        messagebox.showerror("Error", "Enter a valid, non-negative quantity.")
-        return
-
-    inventory.append({"name": name, "quantity": int(quantity)})
+    add_inventory_item(name, int(quantity))
     refresh_list()
     clear_fields()
 
-def refresh_list():
-    for row in inventory_table.get_children():
-        inventory_table.delete(row)
-
-    for index, item in enumerate(inventory):
-        inventory_table.insert(
-            "", "end", iid=str(index),
-            values=(item["name"], item["quantity"])
-        )
-
-def select_item(event):
-    selected = inventory_table.selection()
-    if selected:
-        item = inventory[int(selected[0])]
-        name_entry.delete(0, tk.END)
-        name_entry.insert(0, item["name"])
-        quantity_entry.delete(0, tk.END)
-        quantity_entry.insert(0, str(item["quantity"]))
 
 def update_item():
     selected = inventory_table.selection()
@@ -49,26 +36,52 @@ def update_item():
     name = name_entry.get().strip()
     quantity = quantity_entry.get().strip()
 
-    if not name or not quantity.isdigit():
+    if not name or not quantity.isdecimal():
         messagebox.showerror("Error", "Enter a valid name and quantity.")
         return
 
-    inventory[int(selected[0])] = {
-        "name": name,
-        "quantity": int(quantity)
-    }
+    update_inventory_item(int(selected[0]), name, int(quantity))
     refresh_list()
     clear_fields()
+
+def refresh_list():
+    for row in inventory_table.get_children():
+        inventory_table.delete(row)
+
+    for item_id, name, quantity in get_inventory_items():
+        inventory_table.insert(
+            "", "end",
+            iid=str(item_id),
+            values=(name, quantity)
+        )
+
+
+def select_item(event):
+    selected = inventory_table.selection()
+
+    if selected:
+        values = inventory_table.item(selected[0], "values")
+
+        name_entry.delete(0, tk.END)
+        name_entry.insert(0, values[0])
+
+        quantity_entry.delete(0, tk.END)
+        quantity_entry.insert(0, values[1])
+
 
 def delete_item():
     selected = inventory_table.selection()
+
     if not selected:
-        messagebox.showwarning("Warning", "Select an item first.")
+        messagebox.showwarning(
+            "Warning", "Select an item first."
+        )
         return
 
-    inventory.pop(int(selected[0]))
+    delete_inventory_item(int(selected[0]))
     refresh_list()
     clear_fields()
+
 
 def clear_fields():
     name_entry.delete(0, tk.END)
@@ -110,4 +123,5 @@ inventory_table.heading("Quantity", text="Quantity")
 inventory_table.pack(fill="both", expand=True, padx=20, pady=10)
 inventory_table.bind("<<TreeviewSelect>>", select_item)
 
+refresh_list()
 root.mainloop()
