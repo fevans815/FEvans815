@@ -108,3 +108,82 @@ def get_low_stock_items():
     items = cursor.fetchall()
     connection.close()
     return items
+
+
+def create_shopping_table():
+    connection = sqlite3.connect(DATABASE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS shopping_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            inventory_id INTEGER NOT NULL,
+            item_name TEXT NOT NULL,
+            purchased INTEGER NOT NULL DEFAULT 0
+                CHECK(purchased IN (0, 1)),
+            FOREIGN KEY (inventory_id)
+                REFERENCES inventory(id)
+        )
+    """)
+
+    connection.commit()
+    connection.close()
+
+
+def generate_shopping_list():
+    create_shopping_table()
+
+    low_stock_items = get_low_stock_items()
+
+    connection = sqlite3.connect(DATABASE)
+    cursor = connection.cursor()
+
+    for item_id, name, quantity, minimum in low_stock_items:
+        cursor.execute("""
+            SELECT id FROM shopping_tasks
+            WHERE inventory_id = ?
+        """, (item_id,))
+
+        existing_task = cursor.fetchone()
+
+        if existing_task is None:
+            cursor.execute("""
+                INSERT INTO shopping_tasks
+                    (inventory_id, item_name)
+                VALUES (?, ?)
+            """, (item_id, name))
+
+    connection.commit()
+    connection.close()
+
+
+def get_shopping_list():
+    create_shopping_table()
+
+    connection = sqlite3.connect(DATABASE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT id, item_name, purchased
+        FROM shopping_tasks
+        ORDER BY purchased, item_name
+    """)
+
+    tasks = cursor.fetchall()
+    connection.close()
+    return tasks
+
+
+def mark_task_purchased(task_id):
+    connection = sqlite3.connect(DATABASE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        UPDATE shopping_tasks
+        SET purchased = 1
+        WHERE id = ?
+    """, (task_id,))
+
+    connection.commit()
+    connection.close()
+

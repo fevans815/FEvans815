@@ -8,8 +8,12 @@ from database import (
     get_inventory_items,
     update_inventory_item,
     delete_inventory_item,
-    get_low_stock_items
+    get_low_stock_items,
+    generate_shopping_list,
+    get_shopping_list,
+    mark_task_purchased
 )
+
 
 create_database()
 
@@ -145,6 +149,83 @@ def select_item(event):
         minimum_entry.insert(0, values[2])
 
 
+
+def open_shopping_list():
+    # Generate shopping tasks for low-stock items
+    generate_shopping_list()
+
+    # Create the shopping list window
+    shopping_window = tk.Toplevel(root)
+    shopping_window.title("My Shopping List")
+    shopping_window.geometry("500x400")
+    shopping_window.lift()
+    shopping_window.focus_force()
+
+    ttk.Label(
+        shopping_window,
+        text="My Shopping List",
+        font=("Arial", 18, "bold")
+    ).pack(pady=15)
+
+    # Create a table to display shopping tasks
+    task_table = ttk.Treeview(
+        shopping_window,
+        columns=("Item", "Status"),
+        show="headings"
+    )
+
+    task_table.heading("Item", text="Item Name")
+    task_table.heading("Status", text="Status")
+
+    task_table.pack(
+        fill="both",
+        expand=True,
+        padx=15,
+        pady=10
+    )
+
+    # Refresh the shopping list
+    def refresh_tasks():
+        for row in task_table.get_children():
+            task_table.delete(row)
+
+        for task_id, item_name, purchased in get_shopping_list():
+            status = "Purchased" if purchased else "Need to Buy"
+
+            task_table.insert(
+                "",
+                "end",
+                iid=str(task_id),
+                values=(item_name, status)
+            )
+
+    # Mark selected shopping task as purchased
+    def purchase_selected():
+        selected = task_table.selection()
+
+        if not selected:
+            messagebox.showwarning(
+                "Select an Item",
+                "Please select an item first.",
+                parent=shopping_window
+            )
+            return
+
+        task_id = int(selected[0])
+        mark_task_purchased(task_id)
+        refresh_tasks()
+
+    ttk.Button(
+        shopping_window,
+        text="Mark as Purchased",
+        command=purchase_selected
+    ).pack(pady=10)
+
+    refresh_tasks()
+
+
+
+    
 def clear_fields():
     name_entry.delete(0, tk.END)
     quantity_entry.delete(0, tk.END)
@@ -204,6 +285,14 @@ ttk.Button(
     text="Show Low-Stock Items",
     command=show_low_stock
 ).pack(pady=5)
+
+
+ttk.Button(
+    root,
+    text="Open Shopping List",
+    command=open_shopping_list
+).pack(pady=5)
+
 
 inventory_table = ttk.Treeview(
     root,
