@@ -116,5 +116,90 @@ class TestKitchenInventory(unittest.TestCase):
                 self.assertEqual(len(active_bread), 1)
 
 
+
+    def test_exact_minimum_is_low_stock(self):
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(database, "DATABASE", os.path.join(folder, "test.db")):
+                database.create_database()
+                database.add_inventory_item("Rice", 3, 3)
+                names = [item[1] for item in database.get_low_stock_items()]
+                self.assertIn("Rice", names)
+
+    def test_above_minimum_is_not_low_stock(self):
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(database, "DATABASE", os.path.join(folder, "test.db")):
+                database.create_database()
+                database.add_inventory_item("Rice", 4, 3)
+                names = [item[1] for item in database.get_low_stock_items()]
+                self.assertNotIn("Rice", names)
+
+    def test_multiple_low_stock_items_generate_shopping_tasks(self):
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(database, "DATABASE", os.path.join(folder, "test.db")):
+                database.create_database()
+                database.add_inventory_item("Milk", 1, 3)
+                database.add_inventory_item("Bread", 0, 2)
+                database.add_inventory_item("Eggs", 12, 6)
+                database.generate_shopping_list()
+                names = [task[1] for task in database.get_shopping_list()]
+                self.assertCountEqual(names, ["Milk", "Bread"])
+
+    def test_mark_shopping_task_purchased(self):
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(database, "DATABASE", os.path.join(folder, "test.db")):
+                database.create_database()
+                database.add_inventory_item("Milk", 0, 2)
+                database.generate_shopping_list()
+                task_id = database.get_shopping_list()[0][0]
+                database.mark_task_purchased(task_id)
+                tasks = database.get_shopping_list()
+                self.assertEqual(tasks[0][2], 1)
+
+    def test_negative_quantity_rejected_by_database(self):
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(database, "DATABASE", os.path.join(folder, "test.db")):
+                database.create_database()
+                with self.assertRaises(sqlite3.IntegrityError):
+                    database.add_inventory_item("Milk", -1, 2)
+                self.assertEqual(database.get_inventory_items(), [])
+
+
+    def test_minimum_quantity_update_changes_low_stock_status(self):
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(database, "DATABASE", os.path.join(folder, "test.db")):
+                database.create_database()
+                database.add_inventory_item("Pasta", 5, 2)
+                item_id = database.get_inventory_items()[0][0]
+                self.assertNotIn("Pasta", [item[1] for item in database.get_low_stock_items()])
+                database.update_inventory_item(item_id, "Pasta", 5, 6)
+                self.assertIn("Pasta", [item[1] for item in database.get_low_stock_items()])
+
+    def test_purchased_shopping_task_persists_after_reopening(self):
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(database, "DATABASE", os.path.join(folder, "test.db")):
+                database.create_database()
+                database.add_inventory_item("Flour", 0, 2)
+                database.generate_shopping_list()
+                task_id = database.get_shopping_list()[0][0]
+                database.mark_task_purchased(task_id)
+                database.generate_shopping_list()
+                tasks = database.get_shopping_list()
+                self.assertEqual(len(tasks), 1)
+                self.assertEqual(tasks[0], (task_id, "Flour", 1))
+
 if __name__ == "__main__":
     unittest.main()

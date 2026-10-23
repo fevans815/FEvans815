@@ -12,7 +12,7 @@ def create_database():
         CREATE TABLE IF NOT EXISTS inventory (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            quantity INTEGER NOT NULL CHECK(quantity >= 0),
+            quantity INTEGER NOT NULL CHECK(quantity >=0) ,
             minimum_quantity INTEGER NOT NULL DEFAULT 2
                 CHECK(minimum_quantity >= 0)
         )
@@ -75,7 +75,7 @@ def update_inventory_item(item_id, name, quantity,
             UPDATE inventory
             SET name = ?, quantity = ?, minimum_quantity = ?
             WHERE id = ?
-        """, (name, quantity, minimum_quantity, item_id))
+        """, (name, quantity,minimum_quantity, item_id))
 
     connection.commit()
     connection.close()

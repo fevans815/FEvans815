@@ -32,15 +32,30 @@ def get_minimum(item_id):
     return result[0] if result else 2
 
 
+
 def read_fields():
     name = name_entry.get().strip()
     quantity = quantity_entry.get().strip()
     minimum = minimum_entry.get().strip()
 
-    if not name or not quantity.isdecimal() or not minimum.isdecimal():
+    if not name:
         messagebox.showerror(
-            "Invalid Input",
-            "Enter an item name and non-negative whole numbers."
+            "Missing Item Name",
+            "Please enter a name for your inventory item."
+        )
+        return None
+
+    if not quantity.isdecimal():
+        messagebox.showerror(
+            "Invalid Quantity",
+            "Quantity must be a non-negative whole number."
+        )
+        return None
+
+    if not minimum.isdecimal():
+        messagebox.showerror(
+            "Invalid Minimum Quantity",
+            "Minimum quantity must be a non-negative whole number."
         )
         return None
 
@@ -309,12 +324,19 @@ for column, heading in [
     inventory_table.heading(column, text=heading)
     inventory_table.column(column, width=150)
 
+
 inventory_table.tag_configure(
-    "low", background="#ffcccc"
+    "low",
+    background="#ffcccc",
+    foreground="#000000"
 )
+
 inventory_table.tag_configure(
-    "good", background="#ddffdd"
+    "good",
+    background="#ddffdd",
+    foreground="#000000"
 )
+
 
 inventory_table.pack(
     fill="both", expand=True, padx=20, pady=10
